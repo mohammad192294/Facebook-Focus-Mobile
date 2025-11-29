@@ -3,49 +3,35 @@
 
   const VIDEO_KEYWORDS = ['video','reel','reels','watch','story','stories','short','shorts'];
 
-  // Remove node safely
-  function removeNodeSafe(node){
+  function removeVideoElement(node){
     if(!node) return;
-    try{
-      const parent = node.closest('div, article, section');
-      if(parent) parent.remove();
-      else node.remove();
-    } catch(e){
-      try { node.style.display='none'; node.style.height='0px'; node.style.opacity='0'; } catch(_) {}
-    }
+    try {
+      const tag = node.tagName?.toLowerCase();
+      if(tag==='video' || tag==='iframe') node.remove();
+      else if(node.href && VIDEO_KEYWORDS.some(k=>node.href.toLowerCase().includes(k))) node.remove();
+      else if(node.innerText && VIDEO_KEYWORDS.some(k=>node.innerText.toLowerCase().includes(k))) node.remove();
+    } catch(e){}
   }
 
-  // Check if node text contains video keywords
-  function nodeContainsKeyword(node){
-    try{
-      if(!node || !node.innerText) return false;
-      const txt = node.innerText.toLowerCase();
-      return VIDEO_KEYWORDS.some(k => txt.includes(k));
-    } catch(e){ return false; }
-  }
-
-  // Aggressive sweep function
   function cleanSweep(root=document){
     try{
-      // Remove video and iframe elements
-      root.querySelectorAll('video, iframe').forEach(removeNodeSafe);
+      // 1. Direct video/iframe remove
+      root.querySelectorAll('video, iframe').forEach(removeVideoElement);
 
-      // Remove links/buttons with keywords
-      root.querySelectorAll('a, button, div, span').forEach(n=>{
-        if(nodeContainsKeyword(n)) removeNodeSafe(n);
-      });
+      // 2. Links/buttons containing keywords
+      root.querySelectorAll('a, button, span, div').forEach(removeVideoElement);
 
-      // Remove containers with video elements
+      // 3. Only video/story/reels containers, not parent divs
       root.querySelectorAll('[data-pagelet], article, section, div').forEach(c=>{
         try{
-          if(c.querySelector('video, iframe')) removeNodeSafe(c);
+          if(c.querySelector('video, iframe')) removeVideoElement(c.querySelector('video, iframe'));
         } catch(e){}
       });
     } catch(e){}
   }
 
-  // MutationObserver to catch dynamic content
-  const observer = new MutationObserver(mutations => {
+  // Dynamic content observer
+  const observer = new MutationObserver(mutations=>{
     mutations.forEach(m=>{
       m.addedNodes?.forEach(n=>cleanSweep(n));
     });
@@ -53,12 +39,12 @@
   });
   observer.observe(document.documentElement,{childList:true,subtree:true});
 
-  // Best-effort fetch/XHR override
+  // fetch/XHR override (best-effort)
   try{
     const origFetch = window.fetch;
     window.fetch = function(...args){
-      const url=args[0];
-      if(typeof url==='string' && VIDEO_KEYWORDS.some(k=>url.includes(k))) return new Promise(()=>{}); 
+      const url = args[0];
+      if(typeof url==='string' && VIDEO_KEYWORDS.some(k=>url.includes(k))) return new Promise(()=>{});
       return origFetch.apply(this,args);
     };
   } catch(e){}
@@ -66,12 +52,12 @@
   try{
     const origXhr = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method,url){
-      if(typeof url==='string' && VIDEO_KEYWORDS.some(k=>url.includes(k))){ this.abort(); return; }
+      if(typeof url==='string' && VIDEO_KEYWORDS.some(k=>url.includes(k))) { this.abort(); return; }
       return origXhr.apply(this,arguments);
     };
   } catch(e){}
 
-  // Initial sweep after short delay
-  setTimeout(()=>cleanSweep(), 500);
+  // Initial sweep
+  setTimeout(()=>cleanSweep(),500);
 
 })();
