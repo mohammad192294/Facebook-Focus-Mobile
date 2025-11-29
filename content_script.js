@@ -1,63 +1,68 @@
-(function () {
-  'use strict';
+// content_script.js - ULTRA 2.0 (MAX AGGRESSION)
 
-  const VIDEO_KEYWORDS = ['video','reel','reels','watch','story','stories','short','shorts'];
-
-  function removeVideoElement(node){
-    if(!node) return;
-    try {
-      const tag = node.tagName?.toLowerCase();
-      if(tag==='video' || tag==='iframe') node.remove();
-      else if(node.href && VIDEO_KEYWORDS.some(k=>node.href.toLowerCase().includes(k))) node.remove();
-      else if(node.innerText && VIDEO_KEYWORDS.some(k=>node.innerText.toLowerCase().includes(k))) node.remove();
-    } catch(e){}
-  }
-
-  function cleanSweep(root=document){
-    try{
-      // 1. Direct video/iframe remove
-      root.querySelectorAll('video, iframe').forEach(removeVideoElement);
-
-      // 2. Links/buttons containing keywords
-      root.querySelectorAll('a, button, span, div').forEach(removeVideoElement);
-
-      // 3. Only video/story/reels containers, not parent divs
-      root.querySelectorAll('[data-pagelet], article, section, div').forEach(c=>{
-        try{
-          if(c.querySelector('video, iframe')) removeVideoElement(c.querySelector('video, iframe'));
-        } catch(e){}
-      });
-    } catch(e){}
-  }
-
-  // Dynamic content observer
-  const observer = new MutationObserver(mutations=>{
-    mutations.forEach(m=>{
-      m.addedNodes?.forEach(n=>cleanSweep(n));
+function aggressiveBlocker(mutationsList, observer) {
+    
+    // 1. নেভিগেশন আইকন এবং লিঙ্ক ব্লক (m. & www.)
+    const distractionPaths = ['/reels/', '/watch/', '/marketplace/', '/stories/'];
+    
+    distractionPaths.forEach(path => {
+        const links = document.querySelectorAll(`a[href*="${path}"]`);
+        links.forEach(link => {
+            // Updated selectors to find the parent container more reliably
+            let parentToHide = link.closest('[role="tab"], li, div[role="menuitem"], div[role="feed"] > div, div[data-visualcompletion="ignore-dynamic"]');
+            if (parentToHide) {
+                parentToHide.style.display = 'none';
+            }
+        });
     });
-    cleanSweep(document);
-  });
-  observer.observe(document.documentElement,{childList:true,subtree:true});
 
-  // fetch/XHR override (best-effort)
-  try{
-    const origFetch = window.fetch;
-    window.fetch = function(...args){
-      const url = args[0];
-      if(typeof url==='string' && VIDEO_KEYWORDS.some(k=>url.includes(k))) return new Promise(()=>{});
-      return origFetch.apply(this,args);
-    };
-  } catch(e){}
+    // 2. ফিডের মধ্যে ভিডিও এবং স্টোরি কন্টেইনার ব্লক করা (www এবং m উভয়ের জন্য)
+    const feedDistractionSelectors = [
+        // Reels & Watch Section Containers
+        '[role="feed"] div:has(div[data-testid*="StoriesTab"]), [role="feed"] div:has(a[href*="/reels/"])',
+        
+        // Targetting the main HTML video tag aggressively
+        'video', 
+        
+        // New selectors for iframes, embeds, and objects that might contain video
+        'iframe, object, embed',
+        
+        // Stories and Video tabs/sections 
+        'div[data-pagelet*="Stories"], div[data-pagelet*="Video"], a[href*="/stories/"]',
+        
+        // Targeting Sponsored/Suggested content that usually contains videos
+        '[data-testid*="fbFeedStory"] article div:has(video)',
+        '[aria-label*="Suggested Videos"]',
+        '[aria-label*="Reels and short videos"]',
+        // Targeting the 'Sponsored' label's parent container (highly aggressive)
+        'span:not([data-visualcompletion]) > div:not([style]):has(span[dir="auto"]:not(:has(a))[style*="color"] > span:not([style])), span[dir="auto"]:not(:has(a))[style*="color"]:not(:has(span))'
+    ];
+    
+    feedDistractionSelectors.forEach(selector => {
+        try {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                // Find the closest full post container or the video itself
+                let containerToHide = el.closest('[role="feed"] > div, [role="article"], [data-testid*="fbFeedStory"], [data-visualcompletion="ignore-dynamic"]');
+                if (containerToHide && containerToHide.parentElement.children.length > 1) {
+                    containerToHide.style.display = 'none';
+                } else if (el.tagName === 'VIDEO' || el.tagName === 'IFRAME' || el.tagName === 'OBJECT' || el.tagName === 'EMBED') {
+                    // Hide the element if no suitable parent is found
+                    el.style.display = 'none';
+                }
+            });
+        } catch (e) {
+            // Ignore complex selectors if they fail
+        }
+    });
+}
 
-  try{
-    const origXhr = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function(method,url){
-      if(typeof url==='string' && VIDEO_KEYWORDS.some(k=>url.includes(k))) { this.abort(); return; }
-      return origXhr.apply(this,arguments);
-    };
-  } catch(e){}
+// MutationObserver সেট আপ করা (Dynamic loading handling)
+const targetNode = document.body;
+const config = { childList: true, subtree: true };
 
-  // Initial sweep
-  setTimeout(()=>cleanSweep(),500);
+const observer = new MutationObserver(aggressiveBlocker);
+observer.observe(targetNode, config);
 
-})();
+// পেজ লোডের সঙ্গে সঙ্গেই একবার চালানো
+aggressiveBlocker();
