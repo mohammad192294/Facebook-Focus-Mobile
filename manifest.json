@@ -1,20 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "FB Ultra Clean No-Video",
-  "version": "1.1",
+  "name": "FB Ultra Safe No-Video",
+  "version": "1.0",
   "description": "Remove all video, reels, watch, stories from Facebook while keeping text posts/layout intact.",
-  "permissions": [
-    "activeTab",
-    "scripting"
-  ],
-  "icons": {
-    "128": "icons/icon128.png"
-  },
+  "permissions": ["activeTab","scripting"],
+  "icons": { "128": "icons/icon128.png" },
   "content_scripts": [
     {
-      "matches": ["*://*.facebook.com/*", "*://facebook.com/*"],
+      "matches": ["*://*.facebook.com/*","*://facebook.com/*"],
       "js": ["content_script.js"],
-      "run_at": "document_start"
+      "run_at": "document_idle"
     }
   ]
 }
