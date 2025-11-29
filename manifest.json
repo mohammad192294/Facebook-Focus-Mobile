@@ -1,22 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "FB Clean Hard Mode",
+  "name": "FB Ultra Clean No-Video",
   "version": "1.0",
-  "description": "Remove videos, reels, stories and hide empty spaces from Facebook completely.",
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.facebook.com/*",
-        "*://facebook.com/*",
-        "*://m.facebook.com/*",
-        "*://web.facebook.com/*"
-      ],
-      "js": ["content.js"],
-      "css": ["style.css"]
-    }
-  ],
+  "description": "Completely remove video, reels, watch, stories from Facebook, keeping layout intact.",
   "permissions": [
     "activeTab",
     "scripting"
+  ],
+  "icons": {
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.facebook.com/*", "*://facebook.com/*"],
+      "js": ["content_script.js"],
+      "run_at": "document_start"
+    }
   ]
 }
