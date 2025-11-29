@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "FB Clean Hard Mode",
+  "version": "1.0",
+  "description": "Remove videos, reels, stories and hide empty spaces from Facebook completely.",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.facebook.com/*",
+        "*://facebook.com/*",
+        "*://m.facebook.com/*",
+        "*://web.facebook.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ]
+}
