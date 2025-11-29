@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "FB Ultra Clean No-Video",
   "version": "1.0",
-  "description": "Completely remove video, reels, watch, stories from Facebook, keeping layout intact.",
+  "description": "Remove all video, reels, watch, stories from Facebook while keeping text posts/layout intact.",
   "permissions": [
     "activeTab",
     "scripting"
